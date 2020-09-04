@@ -21,6 +21,12 @@ Just run awsbuddy.py and follow the menu flow.
 ```
 python3 awsbuddy.py
 ```
+
+## Preview of current development status
+Look how nice it already is :)
+
+![Preview](images/awsbuddy_preview.png)
+
 ## Our release plan for the Year 2020
 Disclaimer:
 Right now AWS Buddy is at 0. It does not work and will start to work as soon as we reached the first milestone.
