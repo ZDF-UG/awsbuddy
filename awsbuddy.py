@@ -1,11 +1,7 @@
 # Menue
 from __future__ import print_function, unicode_literals
-
+from PyInquirer import style_from_dict, Token, prompt, Separator
 from pprint import pprint
-
-from PyInquirer import prompt, Separator
-
-from examples import custom_style_2
 # end
 import boto3
 import argparse
@@ -64,26 +60,31 @@ def getCosts(start, end):
 
 
 def DisplayCosts():
-    print('Current month costs: {}'.format(
-        getCosts(
-            '{}-01'.format(datetime.today().strftime("%Y-%m")),
-            '{}'.format(datetime.today().strftime("%Y-%m-%d"))
-        ))
+    _month = getCosts(
+        '{}-01'.format(datetime.today().strftime("%Y-%m")),
+        '{}'.format(datetime.today().strftime("%Y-%m-%d"))
     )
-
-    print('Current total costs: {}'.format(
-        getCosts(
-            '{}-01-01'.format(datetime.today().strftime("%Y")),
-            '{}'.format(datetime.today().strftime("%Y-%m-%d"))
-        ))
+    _total = getCosts(
+        '{}-01-01'.format(datetime.today().strftime("%Y")),
+        '{}'.format(datetime.today().strftime("%Y-%m-%d"))
     )
+    print('The ressources in {} for this month are {} USD and {} USD total this year.'.format(
+        account_id, _month, _total))
 
 
-def secHubCheckResult(enabled):
-    if enabled == True:
+def checkSecurityHub():
+    try:
+        response = client.describe_hub()
+        secHubArn = (response["HubArn"])
+
         print("Security Hub is enabled! Yess")
-    else:
+
+    except client.exceptions.InvalidAccessException:
         print("Security Hub is not enabled... oO")
+
+
+def enableSecuHub():
+    enableSecHub()
 
 
 def enableSecHub():
@@ -105,15 +106,7 @@ Config.read(os.path.expanduser('~/.aws/credentials'))
 sections = Config.sections()
 # for profile in sections:
 # print(profile)
-checkBudget()
-DisplayCosts()
-try:
-    response = client.describe_hub()
-    secHubArn = (response["HubArn"])
-    secHubCheckResult(True)
-except client.exceptions.InvalidAccessException:
-    secHubCheckResult(False)
-    enableSecHub()
+
 
 style = style_from_dict({
     Token.Separator: '#cc5454',
@@ -131,33 +124,81 @@ def get_budget_options(answers):
     return options
 
 
-questions = [
+def draw_budget():
+    questions = [
 
-    {
-        'type': 'list',
-        'name': 'Budget',
-        'message': 'Budget Setup',
-        'choices': get_budget_options,
-        'validate': lambda answer: 'You must choose at least one Budget.'
-        if len(answer) == 0 else True
-    },
-    {
-        'type': 'list',
-        'message': 'Select Notification Option',
-        'name': 'Notification',
-        'choices': [
-            {
-                'name': 'yes'
-            },
-            {
-                'name': 'no'
-            },
+        {
+            'type': 'list',
+            'name': 'Budget',
+            'message': 'Budget Setup',
+            'choices': get_budget_options,
+            'validate': lambda answer: 'You must choose at least one Budget.'
+            if len(answer) == 0 else True
+        },
+        {
+            'type': 'list',
+            'message': 'Select Notification Option',
+            'name': 'Notification',
+            'choices': [
+                {
+                    'name': 'yes'
+                },
+                {
+                    'name': 'no'
+                },
 
-        ],
-        'validate': lambda answer: 'You must choose at least one Budget.'
-        if len(answer) == 0 else True
-    },
-]
+            ],
+            'validate': lambda answer: 'You must choose at least one Budget.'
+            if len(answer) == 0 else True
+        },
+    ]
 
-answers = prompt(questions, style=style)
-pprint(answers)
+    answers = prompt(questions, style=style)
+    pprint(answers)
+
+
+def get_menu_options(answers):
+    options = ['Budget', 'Costs', 'Security', 'About', 'Exit']
+    return options
+
+
+def draw_intro():
+    print('\n\n\nAWS Buddy 2020 Version: {}'.format(version))
+    print('Copyright ZERODOTFIVE UG')
+    print('Please contribute: {}\n'.format(
+        'https://github.com/ZDF-UG/awsbuddy'))
+
+
+def draw_main():
+
+    questions = [
+
+        {
+            'type': 'list',
+            'name': 'Option',
+            'message': 'This is the main menu. Please choose one of the following actions:',
+            'choices': get_menu_options,
+            'validate': lambda answer: 'You must choose at least one Option.'
+            if len(answer) == 0 else True
+        },
+    ]
+
+    answers = prompt(questions, style=style)
+    # pprint(answers)
+
+    if answers['Option'] == 'Budget':
+        checkBudget()
+        draw_budget()
+    if answers['Option'] == 'Costs':
+        DisplayCosts()
+    if answers['Option'] == 'Security':
+        checkSecurityHub()
+    if answers['Option'] == 'Exit':
+        return 0
+    if answers['Option'] == 'About':
+        draw_intro()
+    draw_main()
+
+
+draw_intro()
+draw_main()
