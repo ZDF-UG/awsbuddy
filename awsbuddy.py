@@ -1,5 +1,6 @@
 # Menue
 from __future__ import print_function, unicode_literals
+import subprocess
 from PyInquirer import style_from_dict, Token, prompt, Separator
 from pprint import pprint
 # end
@@ -26,6 +27,26 @@ account_id = sts.get_caller_identity()["Account"]
 # display menu 100; 200; 500; 1000
 # create budget
 # check subscriber
+
+
+def deployMonitoring():
+    bashCommand = 'cd building_blocks/buckwatch/;npm run build;cdk deploy buckwatch-stack'
+    process = subprocess.Popen(
+        bashCommand, stdout=subprocess.PIPE, shell=True)
+    output, error = process.communicate()
+
+    print(output)
+    print(error)
+
+
+def destroyMonitoring():
+    bashCommand = 'cd building_blocks/buckwatch/;npm run build;cdk destroy buckwatch-stack --force'
+    process = subprocess.Popen(
+        bashCommand, stdout=subprocess.PIPE, shell=True)
+    output, error = process.communicate()
+
+    print(output)
+    print(error)
 
 
 def checkBudget():
@@ -158,7 +179,8 @@ def draw_budget():
 
 
 def get_menu_options(answers):
-    options = ['Budget', 'Costs', 'Security', 'About', 'Exit']
+    options = ['Budget', 'Costs', 'Security',
+               'Deploy', 'Destroy', 'About', 'Exit']
     return options
 
 
@@ -197,6 +219,10 @@ def draw_main():
         return 0
     if answers['Option'] == 'About':
         draw_intro()
+    if answers['Option'] == 'Deploy':
+        deployMonitoring()
+    if answers['Option'] == 'Destroy':
+        destroyMonitoring()
     draw_main()
 
 
