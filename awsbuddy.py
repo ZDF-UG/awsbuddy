@@ -18,7 +18,12 @@ budget = boto3.client('budgets')
 sts = boto3.client('sts')
 # SecurityHub
 awsbuddy_budget = "AWSBuddy_Default"
-account_id = sts.get_caller_identity()["Account"]
+
+try:
+    account_id = sts.get_caller_identity()["Account"]
+except Exception as ex:
+    print('Error: Please set your credentials first.')
+    exit()
 # Check if budget exist
 # yes
 # do nothig

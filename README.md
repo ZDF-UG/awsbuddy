@@ -8,6 +8,7 @@ This project is about giving owners of an AWS Account more control over thier ac
  * Features
    - Overview of all costs this year and current costs
    - Securing the account (Checking status, enabling & configuring AWS SecurityHub)
+   - Deploy project support
 
 ## Getting started
 
@@ -31,5 +32,3 @@ Disclaimer:
 Right now AWS Buddy is at 0. It does not work and will start to work as soon as we reached the first milestone.
 
 ![Release Plan](images/awsbuddy_release_plan.png)
-
-### BuckWatch
