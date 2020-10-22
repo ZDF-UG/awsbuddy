@@ -8,8 +8,64 @@ import boto3
 import argparse
 import configparser
 import os
+import json
 import botocore.exceptions
 from datetime import datetime
+
+style = style_from_dict({
+    Token.Separator: '#cc5454',
+    Token.QuestionMark: '#673ab7 bold',
+    Token.Selected: '#cc5454',  # default
+    Token.Pointer: '#673ab7 bold',
+    Token.Instruction: '',  # default
+    Token.Answer: '#f44336 bold',
+    Token.Question: '',
+})
+
+config_file = 'config/config.json'
+
+
+def readConfig():
+    global local_config
+    try:
+        with open(config_file, 'r') as f:
+            local_config = json.load(f)
+
+    except Exception as ex:
+        print('Error reading configuration file')
+        exit()
+
+
+def setConfigParameter(parameterInput, description):
+    if parameterInput == None:
+        return
+    global local_config
+    questions = [
+        {
+            'type': 'input',
+            'name': parameterInput,
+            'message': description,
+        }
+    ]
+
+    answers = prompt(questions, style=style)
+    local_config[parameterInput] = answers.get(
+        parameterInput)
+
+    with open(config_file, 'w') as f:
+        json.dump(local_config, f)
+
+
+def initialConfig():
+    if local_config.get('budget_notification_mail', '') == ('' or None):
+
+        print('No notification mail set.')
+        setConfigParameter('budget_notification_mail',
+                           'What is your notification mail address?')
+
+    print('Mail adress set to: {}'.format(
+        local_config.get('budget_notification_mail', '')))
+
 
 version = "Gin"
 client = boto3.client('securityhub')
@@ -18,7 +74,8 @@ budget = boto3.client('budgets')
 sts = boto3.client('sts')
 # SecurityHub
 awsbuddy_budget = "AWSBuddy_Default"
-
+awsbuddy_budget_fc = "AWSBuddy_Forcast"
+local_config = {}
 try:
     account_id = sts.get_caller_identity()["Account"]
 except Exception as ex:
@@ -54,16 +111,19 @@ def destroyMonitoring():
     print(error)
 
 
-def checkBudget():
+def checkBudget(budgetName):
 
     try:
         print("Checking budget ....")
         response = budget.describe_budget(
             AccountId=account_id,
-            BudgetName=awsbuddy_budget
+            BudgetName=budgetName
         )
+        print('{} Budget has been setup'.format(u'\u2713'))
+        return True
     except budget.exceptions.NotFoundException:
         print("Budget not setup... ")
+    return False
 
 
 def getCosts(start, end):
@@ -134,17 +194,6 @@ sections = Config.sections()
 # print(profile)
 
 
-style = style_from_dict({
-    Token.Separator: '#cc5454',
-    Token.QuestionMark: '#673ab7 bold',
-    Token.Selected: '#cc5454',  # default
-    Token.Pointer: '#673ab7 bold',
-    Token.Instruction: '',  # default
-    Token.Answer: '#f44336 bold',
-    Token.Question: '',
-})
-
-
 def get_budget_options(answers):
     options = ['50', '100', '200', '300']
     return options
@@ -185,7 +234,7 @@ def draw_budget():
 
 def get_menu_options(answers):
     options = ['Budget', 'Costs', 'Security',
-               'Deploy', 'Destroy', 'CreateBudget', 'DeleteBudget', 'About', 'Exit']
+               'Deploy', 'Destroy', 'CreateBudget', 'DeleteBudget', 'About', 'Settings', 'Exit']
     return options
 
 
@@ -194,6 +243,33 @@ def draw_intro():
     print('Copyright ZERODOTFIVE UG')
     print('Please contribute: {}\n'.format(
         'https://github.com/ZDF-UG/awsbuddy'))
+
+
+def get_menu_settings(answers):
+    options = ['Change notification mail']
+    return options
+
+
+def draw_settings():
+    questions = [
+
+        {
+            'type': 'list',
+            'name': 'Option',
+            'message': 'Settings:',
+            'choices': get_menu_settings,
+            'validate': lambda answer: 'You must choose at least one Option.'
+            if len(answer) == 0 else True
+        },
+    ]
+
+    answers = prompt(questions, style=style)
+    # pprint(answers)
+
+    if answers['Option'] == 'Change notification mail':
+        setConfigParameter('budget_notification_mail',
+                           'What is your notification mail address?')
+        draw_main()
 
 
 def deleteBudget(budgetName):
@@ -272,17 +348,18 @@ def draw_main():
     # pprint(answers)
 
     if answers['Option'] == 'Budget':
-        checkBudget()
+        checkBudget(awsbuddy_budget)
         draw_budget()
     if answers['Option'] == 'Costs':
         DisplayCosts()
     if answers['Option'] == 'DeleteBudget':
-        deleteBudget("AWSBuddy_1")
-        deleteBudget("AWSBuddy_2")
+        deleteBudget(awsbuddy_budget)
+        deleteBudget(awsbuddy_budget_fc)
 
     if answers['Option'] == 'CreateBudget':
-        createBudget("AWSBuddy_1", "100", 'FORECASTED', 'ayoub@umoru.de', 80)
-        createBudget("AWSBuddy_2", "100", 'ACTUAL', 'ayoub@umoru.de', 80)
+        createBudget(awsbuddy_budget_fc, "100",
+                     'FORECASTED', 'ayoub@umoru.de', 80)
+        createBudget(awsbuddy_budget, "100", 'ACTUAL', 'ayoub@umoru.de', 80)
 
     if answers['Option'] == 'Security':
         checkSecurityHub()
@@ -290,6 +367,8 @@ def draw_main():
         return 0
     if answers['Option'] == 'About':
         draw_intro()
+    if answers['Option'] == 'Settings':
+        draw_settings()
     if answers['Option'] == 'Deploy':
         deployMonitoring()
     if answers['Option'] == 'Destroy':
@@ -297,5 +376,7 @@ def draw_main():
     draw_main()
 
 
+readConfig()
+initialConfig()
 draw_intro()
 draw_main()
