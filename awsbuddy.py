@@ -185,7 +185,7 @@ def draw_budget():
 
 def get_menu_options(answers):
     options = ['Budget', 'Costs', 'Security',
-               'Deploy', 'Destroy', 'About', 'Exit']
+               'Deploy', 'Destroy', 'CreateBudget', 'DeleteBudget', 'About', 'Exit']
     return options
 
 
@@ -194,6 +194,64 @@ def draw_intro():
     print('Copyright ZERODOTFIVE UG')
     print('Please contribute: {}\n'.format(
         'https://github.com/ZDF-UG/awsbuddy'))
+
+
+def deleteBudget(budgetName):
+    try:
+        print("ECreating Budget {} ....".format(budgetName))
+        response = budget.delete_budget(
+            AccountId=account_id,
+            BudgetName=budgetName
+        )
+    except budget.exceptions.NotFoundException:
+        print("Budget {} not found.".format(budgetName))
+
+
+def createBudget(budget_name, budget_amount, notification_type, mail, threshold_percent):
+    try:
+        response = budget.create_budget(
+            AccountId=account_id,
+            Budget={
+                'BudgetName': budget_name,
+                'BudgetLimit': {
+                    'Amount': budget_amount,
+                    'Unit': 'USD'
+                },
+                'CostTypes': {
+                    'IncludeTax': True,
+                    'IncludeSubscription': True,
+                    'UseBlended': True,
+                    'IncludeRefund': True,
+                    'IncludeCredit': True,
+                    'IncludeUpfront': True,
+                    'IncludeRecurring': True,
+                    'IncludeOtherSubscription': True,
+                    'IncludeSupport': True,
+                    'IncludeDiscount': False,
+                    'UseAmortized': False
+                },
+                'TimeUnit': 'MONTHLY',
+                'BudgetType': 'COST'
+            },
+            NotificationsWithSubscribers=[
+                {
+                    'Notification': {
+                        'NotificationType': notification_type,
+                        'ComparisonOperator': 'GREATER_THAN',
+                        'Threshold': threshold_percent,
+                        'ThresholdType': 'PERCENTAGE'
+                    },
+                    'Subscribers': [
+                        {
+                            'SubscriptionType': 'EMAIL',
+                            'Address': mail
+                        },
+                    ]
+                },
+            ]
+        )
+    except budget.exceptions.DuplicateRecordException:
+        print("Budget {} does already exist.".format(budget_name))
 
 
 def draw_main():
@@ -218,6 +276,14 @@ def draw_main():
         draw_budget()
     if answers['Option'] == 'Costs':
         DisplayCosts()
+    if answers['Option'] == 'DeleteBudget':
+        deleteBudget("AWSBuddy_1")
+        deleteBudget("AWSBuddy_2")
+
+    if answers['Option'] == 'CreateBudget':
+        createBudget("AWSBuddy_1", "100", 'FORECASTED', 'ayoub@umoru.de', 80)
+        createBudget("AWSBuddy_2", "100", 'ACTUAL', 'ayoub@umoru.de', 80)
+
     if answers['Option'] == 'Security':
         checkSecurityHub()
     if answers['Option'] == 'Exit':
